@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>dget Web 控制台</title>
+<style>
+/* ── tokens ── */
+:root,[data-theme="light"]{
+  --bg:#f0f4ff;
+  --bg2:#e8eeff;
+  --panel:#ffffff;
+  --panel2:#f3f6ff;
+  --panel3:#eaedfa;
+  --border:#d4daef;
+  --border2:#dde3f5;
+  --text:#1a1f3c;
+  --muted:#5b6690;
+  --faint:#adb5d6;
+  --primary:#4f6fff;
+  --primary-h:#3457e8;
+  --grad:linear-gradient(135deg,#4f6fff 0%,#a855f7 100%);
+  --grad2:linear-gradient(135deg,#6366f1 0%,#ec4899 100%);
+  --success:#059669;--danger:#e11d48;--warn:#d97706;
+  --log-bg:#f8f9ff;--log-text:#2a3060;
+  --shadow:0 4px 24px rgba(79,111,255,.12);
+  --shadow2:0 2px 8px rgba(79,111,255,.08);
+  --r:14px;--rs:9px;
+}
+[data-theme="dark"]{
+  --bg:#0d0f1e;
+  --bg2:#111327;
+  --panel:#151829;
+  --panel2:#1a1e33;
+  --panel3:#1e2338;
+  --border:#252a45;
+  --border2:#1e2340;
+  --text:#e4e8ff;
+  --muted:#7b85b8;
+  --faint:#3a4060;
+  --primary:#6b8fff;
+  --primary-h:#8aaeff;
+  --grad:linear-gradient(135deg,#6b8fff 0%,#c084fc 100%);
+  --grad2:linear-gradient(135deg,#818cf8 0%,#f472b6 100%);
+  --success:#34d399;--danger:#fb7185;--warn:#fbbf24;
+  --log-bg:#090d1a;--log-text:#93b4ff;
+  --shadow:0 4px 32px rgba(0,0,0,.4);
+  --shadow2:0 2px 10px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html{transition:background .25s,color .25s;}
+body{font-family:Inter,'PingFang SC',system-ui,sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5;}
+
+/* ── theme toggle ── */
+.theme-btn{
+  width:36px;height:36px;border-radius:50%;border:1px solid var(--border);
+  background:var(--panel2);cursor:pointer;display:flex;align-items:center;
+  justify-content:center;color:var(--muted);transition:all .2s;flex-shrink:0;
+}
+.theme-btn:hover{color:var(--text);border-color:var(--primary);}
+
+/* ── login ── */
+#loginScreen{
+  display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background:var(--bg);
+  position:relative;overflow:hidden;
+}
+#loginScreen::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 70% 50% at 20% 20%,rgba(79,111,255,.18) 0%,transparent 60%),
+             radial-gradient(ellipse 60% 60% at 80% 80%,rgba(168,85,247,.15) 0%,transparent 60%);
+  pointer-events:none;
+}
+.lcard{
+  background:var(--panel);border:1px solid var(--border);border-radius:22px;
+  padding:46px 40px;width:360px;position:relative;z-index:1;
+  box-shadow:var(--shadow);
+}
+.llogo{display:flex;align-items:center;gap:13px;margin-bottom:30px;}
+.llogo-icon{
+  width:42px;height:42px;border-radius:12px;
+  background:var(--grad);display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;box-shadow:0 4px 14px rgba(79,111,255,.35);
+}
+.llogo span{font-size:22px;font-weight:800;letter-spacing:-.5px;
+  background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;}
+.lcard label{display:block;color:var(--muted);font-size:11px;
+  text-transform:uppercase;letter-spacing:1px;margin:16px 0 6px;}
+.lcard input{
+  width:100%;background:var(--panel2);border:1px solid var(--border);
+  color:var(--text);border-radius:var(--rs);padding:11px 14px;outline:none;
+  transition:border-color .18s,box-shadow .18s;font-size:14px;
+}
+.lcard input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,111,255,.15);}
+#loginErr{color:var(--danger);font-size:12px;margin-top:10px;min-height:16px;}
+.btn-login{
+  width:100%;margin-top:22px;padding:13px;border-radius:var(--rs);
+  background:var(--grad);color:#fff;border:none;font-weight:700;font-size:15px;
+  cursor:pointer;transition:opacity .18s,transform .12s;
+  box-shadow:0 4px 16px rgba(79,111,255,.35);
+}
+.btn-login:hover{opacity:.9;transform:translateY(-1px);}
+.btn-login:active{transform:translateY(0);}
+.lcard-footer{display:flex;justify-content:flex-end;margin-top:16px;}
+
+/* ── app shell ── */
+#app{display:none;flex-direction:column;min-height:100vh;}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:56px;
+  border-bottom:1px solid var(--border2);
+  background:var(--panel);
+  position:sticky;top:0;z-index:100;gap:12px;
+  box-shadow:var(--shadow2);
+}
+.tl{display:flex;align-items:center;gap:10px;}
+.tl-icon{
+  width:30px;height:30px;border-radius:8px;
+  background:var(--grad);display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.tl span{font-size:15px;font-weight:800;letter-spacing:-.3px;
+  background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;}
+.tr{display:flex;gap:8px;align-items:center;}
+.ubadge{
+  font-size:12px;color:var(--muted);padding:5px 14px;
+  background:var(--panel2);border-radius:999px;border:1px solid var(--border);
+}
+.bsm{
+  padding:6px 14px;border-radius:var(--rs);border:1px solid var(--border);
+  background:var(--panel2);color:var(--muted);cursor:pointer;font-size:12px;
+  transition:color .15s,border-color .15s,background .15s;
+}
+.bsm:hover{color:var(--text);border-color:var(--primary);background:var(--panel3);}
+
+/* ── layout ── */
+.main{display:grid;grid-template-columns:360px 1fr;flex:1;}
+
+/* ── sidebar ── */
+.sidebar{
+  border-right:1px solid var(--border2);overflow-y:auto;
+  max-height:calc(100vh - 56px);padding:16px;
+  background:var(--bg2);
+}
+.panel{
+  background:var(--panel);border:1px solid var(--border2);
+  border-radius:var(--r);padding:16px;margin-bottom:14px;
+  box-shadow:var(--shadow2);
+}
+.ph3{
+  font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.9px;color:var(--muted);margin-bottom:14px;
+  display:flex;align-items:center;gap:6px;
+}
+.ph3-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--grad);flex-shrink:0;
+}
+.iw{margin-bottom:11px;}
+.iw label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:500;}
+.iw input,.iw select{
+  width:100%;background:var(--panel2);border:1px solid var(--border);
+  color:var(--text);border-radius:var(--rs);padding:9px 12px;outline:none;
+  transition:border-color .18s,box-shadow .18s;font-size:13px;
+  -webkit-appearance:none;appearance:none;
+}
+.iw select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237b85b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+  padding-right:30px;cursor:pointer;
+}
+.iw input:focus,.iw select:focus{
+  border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,111,255,.12);}
+.bprimary{
+  background:var(--grad);color:#fff;border:none;border-radius:var(--rs);
+  padding:11px 16px;font-weight:700;cursor:pointer;font-size:13px;
+  transition:opacity .18s,transform .12s,box-shadow .18s;width:100%;
+  box-shadow:0 3px 12px rgba(79,111,255,.3);
+}
+.bprimary:hover{opacity:.9;transform:translateY(-1px);}
+.bprimary:active{transform:translateY(0);}
+.bprimary:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+/* task items */
+.titem{
+  background:var(--panel2);border:1px solid var(--border2);
+  border-radius:var(--rs);padding:12px;margin-bottom:8px;
+  cursor:pointer;transition:border-color .18s,background .18s,box-shadow .18s;
+}
+.titem:hover{border-color:var(--primary);background:var(--panel3);box-shadow:var(--shadow2);}
+.titem.active{
+  border-color:var(--primary);background:var(--panel3);
+  box-shadow:0 0 0 2px rgba(79,111,255,.2);
+}
+.ttop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.timg{font-weight:600;font-size:12px;word-break:break-all;flex:1;}
+.badge{padding:3px 9px;border-radius:999px;font-size:10px;font-weight:700;white-space:nowrap;}
+.pending{background:rgba(217,119,6,.15);color:var(--warn);}
+.running{
+  background:rgba(79,111,255,.15);color:var(--primary);
+  animation:pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.6;}}
+.done{background:rgba(5,150,105,.15);color:var(--success);}
+.error{background:rgba(225,29,72,.15);color:var(--danger);}
+.tmeta{font-size:11px;color:var(--faint);margin-top:4px;}
+.tacts{display:flex;gap:6px;margin-top:9px;}
+.bdanger{
+  background:transparent;color:var(--danger);
+  border:1px solid rgba(225,29,72,.4);
+  border-radius:var(--rs);padding:4px 10px;cursor:pointer;font-size:11px;
+  transition:background .15s,border-color .15s;
+}
+.bdanger:hover{background:rgba(225,29,72,.1);border-color:var(--danger);}
+.bdown{
+  background:transparent;color:var(--success);
+  border:1px solid rgba(5,150,105,.4);
+  border-radius:var(--rs);padding:4px 10px;font-size:11px;
+  text-decoration:none;transition:background .15s,border-color .15s;display:inline-block;
+}
+.bdown:hover{background:rgba(5,150,105,.1);border-color:var(--success);}
+
+/* file items */
+.fitem{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--panel2);border:1px solid var(--border2);
+  border-radius:var(--rs);padding:10px 12px;margin-bottom:8px;gap:8px;
+  transition:border-color .15s;
+}
+.fitem:hover{border-color:var(--border);}
+.fname{font-size:12px;font-weight:500;word-break:break-all;flex:1;}
+.fmeta{font-size:11px;color:var(--muted);white-space:nowrap;}
+.facts{display:flex;gap:6px;flex-shrink:0;}
+.empty{color:var(--faint);font-size:12px;padding:8px 0;text-align:center;}
+
+/* ── log panel ── */
+.content{
+  display:flex;flex-direction:column;
+  max-height:calc(100vh - 56px);overflow:hidden;
+  background:var(--bg);
+}
+.pbar-wrap{height:3px;background:var(--border2);flex-shrink:0;}
+.pbar{height:3px;background:var(--grad);width:0%;transition:width .5s ease;}
+.loghead{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;border-bottom:1px solid var(--border2);
+  flex-shrink:0;gap:12px;background:var(--panel);
+}
+.logtitle{font-size:14px;font-weight:700;}
+.logmeta{font-size:11px;color:var(--muted);margin-top:2px;}
+.loghead-right{display:flex;gap:8px;align-items:center;}
+.logwrap{flex:1;position:relative;overflow:hidden;}
+pre#logBox{
+  font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  font-size:12px;line-height:1.75;
+  background:var(--log-bg);color:var(--log-text);
+  padding:16px 20px;margin:0;
+  position:absolute;inset:0;
+  overflow-y:auto;white-space:pre-wrap;word-break:break-word;
+}
+.ok{color:var(--success);font-weight:600;}
+.err{color:var(--danger);font-weight:600;}
+.cmd{color:var(--warn);}
+.dim{color:var(--faint);}
+
+.fgroup-label{
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
+  color:var(--primary);padding:10px 0 4px;margin-top:4px;
+  border-top:1px solid var(--border2);
+}
+.fgroup-label:first-child{border-top:none;padding-top:0;}
+/* scrollbar */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
+::-webkit-scrollbar-thumb:hover{background:var(--faint);}
+
+@media(max-width:800px){
+  .main{grid-template-columns:1fr;}
+  .sidebar{max-height:none;border-right:none;border-bottom:1px solid var(--border2);}
+  .content{max-height:55vh;}
+}
+</style>
+</head>
+<body>
+
+<!-- login -->
+<div id="loginScreen">
+  <div class="lcard">
+    <div class="llogo">
+      <div class="llogo-icon">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <path d="M4 11h14M11 4v14" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M6 6l10 10M16 6L6 16" stroke="rgba(255,255,255,.5)" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span>dget Web</span>
+    </div>
+    <label for="un">用户名</label>
+    <input id="un" type="text" placeholder="admin" autocomplete="username"/>
+    <label for="up">密码</label>
+    <input id="up" type="password" placeholder="••••••" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')doLogin()"/>
+    <div id="loginErr"></div>
+    <button class="btn-login" onclick="doLogin()">登 录</button>
+    <div class="lcard-footer">
+      <button class="theme-btn" onclick="toggleTheme()" id="themeBtn" title="切换主题">
+        🌙
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- app -->
+<div id="app">
+  <div class="topbar">
+    <div class="tl">
+      <div class="tl-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M2 8h12M8 2v12" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span>dget Web 控制台</span>
+    </div>
+    <div class="tr">
+      <span class="ubadge" id="ubadge">—</span>
+      <button class="theme-btn" onclick="toggleTheme()" id="themeBtnApp" title="切换主题">🌙</button>
+      <button class="bsm" onclick="doLogout()">退出</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="sidebar">
+
+      <!-- form -->
+      <div class="panel">
+        <div class="ph3"><div class="ph3-dot"></div>新建下载任务</div>
+        <div class="iw">
+          <label>镜像名</label>
+          <input id="imgInput" placeholder="例如 nginx:latest 或 mysql:8.0"/>
+        </div>
+        <div class="iw">
+          <label>目标架构（可选）</label>
+          <select id="archSelect">
+            <option value="">— 不指定架构（默认）—</option>
+            <option value="linux/amd64">linux/amd64（x86_64，最常用）</option>
+            <option value="linux/arm64">linux/arm64（ARM 64位，如树莓派4、Apple M系列）</option>
+            <option value="linux/arm/v7">linux/arm/v7（ARM 32位，如树莓派3）</option>
+            <option value="linux/arm/v6">linux/arm/v6（ARM v6，如树莓派1/Zero）</option>
+            <option value="linux/386">linux/386（x86 32位）</option>
+            <option value="linux/ppc64le">linux/ppc64le（PowerPC 64位小端）</option>
+            <option value="linux/s390x">linux/s390x（IBM Z系列）</option>
+            <option value="linux/riscv64">linux/riscv64（RISC-V 64位）</option>
+            <option value="linux/mips64le">linux/mips64le（MIPS 64位小端）</option>
+            <option value="windows/amd64">windows/amd64</option>
+            <option value="custom">✏ 手动输入…</option>
+          </select>
+        </div>
+        <div class="iw" id="customArchWrap" style="display:none">
+          <label>自定义平台</label>
+          <input id="customArch" placeholder="例如 linux/amd64 或 linux/arm"/>
+        </div>
+        <button class="bprimary" id="submitBtn" onclick="submitTask()">开始下载</button>
+      </div>
+
+      <!-- tasks -->
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div class="ph3" style="margin:0"><div class="ph3-dot"></div>任务列表</div>
+          <button class="bsm" onclick="loadTasks()">刷新</button>
+        </div>
+        <div id="taskList"><div class="empty">暂无任务</div></div>
+      </div>
+
+      <!-- files -->
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div class="ph3" style="margin:0"><div class="ph3-dot"></div>已下载文件</div>
+          <button class="bsm" onclick="loadFiles()">刷新</button>
+        </div>
+        <div id="fileList"><div class="empty">暂无文件</div></div>
+      </div>
+    </div>
+
+    <!-- log -->
+    <div class="content">
+      <div class="pbar-wrap"><div class="pbar" id="pbar"></div></div>
+      <div class="loghead">
+        <div>
+          <div class="logtitle" id="logTitle">实时日志</div>
+          <div class="logmeta" id="logMeta">在左侧点击任务查看实时下载日志</div>
+        </div>
+        <div class="loghead-right">
+          <button class="bsm" onclick="scrollBottom()">↓ 滚动到底</button>
+          <button class="bsm" onclick="clearLog()">清空</button>
+        </div>
+      </div>
+      <div class="logwrap">
+        <pre id="logBox"><span class="dim">← 点击左侧任务即可查看实时日志…</span></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── theme ──────────────────────────────────────────────────────────────────
+let darkMode = true;
+function toggleTheme(){
+  darkMode = !darkMode;
+  document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+  const icon = darkMode ? '🌙' : '☀️';
+  document.getElementById('themeBtn').textContent = icon;
+  const appBtn = document.getElementById('themeBtnApp');
+  if(appBtn) appBtn.textContent = icon;
+}
+
+// ── platform select ────────────────────────────────────────────────────────
+document.getElementById('archSelect').addEventListener('change', function(){
+  const wrap = document.getElementById('customArchWrap');
+  wrap.style.display = this.value === 'custom' ? 'block' : 'none';
+});
+
+function getArch(){
+  const sel = document.getElementById('archSelect').value;
+  if(sel === 'custom') return document.getElementById('customArch').value.trim();
+  return sel;
+}
+
+// ── auth ───────────────────────────────────────────────────────────────────
+let authToken = null, selTask = null, curES = null, fakeTimer = null;
+
+async function doLogin(){
+  const un = document.getElementById('un').value.trim();
+  const up = document.getElementById('up').value;
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  try{
+    const res = await fetch('/api/login',{method:'POST',credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:un,password:up})});
+    const d = await res.json();
+    if(!res.ok){errEl.textContent = d.error||'登录失败';return;}
+    authToken = d.token;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('ubadge').textContent = d.username||un;
+    loadTasks(); loadFiles();
+    setInterval(()=>{loadTasks();loadFiles();}, 10000);
+  }catch(e){errEl.textContent = '网络错误：'+e.message;}
+}
+
+async function doLogout(){
+  await af('/api/logout',{method:'POST'});
+  authToken = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+async function af(url, opts={}){
+  const h = {'Content-Type':'application/json',
+    ...(authToken?{'X-Auth-Token':authToken}:{}),...(opts.headers||{})};
+  return fetch(url,{credentials:'include',...opts,headers:h});
+}
+
+// ── tasks ──────────────────────────────────────────────────────────────────
+async function loadTasks(){
+  const r = await af('/api/tasks'); if(!r.ok)return;
+  renderTasks(await r.json());
+}
+
+function ft(ts){
+  if(!ts)return '—';
+  return new Date(ts*1000).toLocaleString('zh-CN',{hour12:false});
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function renderTasks(list){
+  const el = document.getElementById('taskList');
+  if(!list.length){el.innerHTML='<div class="empty">暂无任务</div>';return;}
+  el.innerHTML = list.map(t=>`
+    <div class="titem${selTask===t.id?' active':''}" id="ti-${t.id}" onclick="selTaskFn('${t.id}')">
+      <div class="ttop">
+        <div class="timg">${esc(t.image)}</div>
+        <span class="badge ${t.status}">${t.status}</span>
+      </div>
+      <div class="tmeta">${ft(t.created_at)}${t.arch?' · <code>'+esc(t.arch)+'</code>':''}</div>
+      <div class="tacts">
+        <button class="bdanger" onclick="event.stopPropagation();delTask('${t.id}')">删除记录</button>
+      </div>
+    </div>`).join('');
+}
+
+async function submitTask(){
+  const img = document.getElementById('imgInput').value.trim();
+  const arch = getArch();
+  if(!img){alert('请填写镜像名');return;}
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = '提交中…';
+  try{
+    const r = await af('/api/download',{method:'POST',body:JSON.stringify({image:img,arch})});
+    const d = await r.json();
+    if(!r.ok){alert(d.error||'提交失败');return;}
+    await loadTasks(); selTaskFn(d.task_id);
+  }finally{btn.disabled=false;btn.textContent='开始下载';}
+}
+
+async function delTask(id){
+  if(!confirm('确认删除此任务记录？'))return;
+  await af('/api/tasks/'+id+'/delete',{method:'POST'});
+  if(selTask===id){selTask=null;resetLog();}
+  loadTasks();
+}
+
+// ── SSE ────────────────────────────────────────────────────────────────────
+function selTaskFn(id){
+  selTask = id;
+  document.querySelectorAll('.titem').forEach(el=>{
+    el.classList.toggle('active', el.id==='ti-'+id);
+  });
+  if(curES){curES.close();curES=null;}
+  if(fakeTimer){clearInterval(fakeTimer);fakeTimer=null;}
+  resetLog();
+
+  const logBox = document.getElementById('logBox');
+  const pbar   = document.getElementById('pbar');
+  logBox.innerHTML = '';
+  pbar.style.width = '0%';
+  pbar.style.background = 'var(--grad)';
+
+  af('/api/tasks/'+id).then(r=>r.json()).then(t=>{
+    document.getElementById('logTitle').textContent = t.image;
+    document.getElementById('logMeta').textContent  = '任务 '+t.id+' · '+ft(t.created_at)+(t.arch?' · '+t.arch:'');
+  });
+
+  let fp = 0;
+  fakeTimer = setInterval(()=>{
+    if(fp<88){fp += Math.random()*2.5; pbar.style.width=fp+'%';}
+  }, 900);
+
+  const es = new EventSource('/api/tasks/'+id+'/stream?token='+encodeURIComponent(authToken),{withCredentials:true});
+  curES = es;
+  es.onmessage = ev=>{
+    const d = JSON.parse(ev.data);
+    if(d.ping) return;
+    if(d.status){
+      clearInterval(fakeTimer);fakeTimer=null;
+      pbar.style.width = '100%';
+      pbar.style.background = d.status==='done'?'var(--success)':'var(--danger)';
+      appendLog(d.status==='done'?'[OK] 任务完成！':'[ERROR] 任务失败', d.status==='done'?'ok':'err');
+      if(d.status==='done') loadFiles();
+      es.close();curES=null;loadTasks();return;
+    }
+    if(d.line!==undefined) appendLog(d.line);
+  };
+  es.onerror=()=>{clearInterval(fakeTimer);fakeTimer=null;es.close();curES=null;};
+}
+
+function appendLog(line, type){
+  const lb = document.getElementById('logBox');
+  const sp = document.createElement('span');
+  const cls = type||(line.startsWith('[OK]')?'ok':(line.includes('[ERROR]')||line.includes('[ERR'))?'err':line.startsWith('[CMD]')?'cmd':'');
+  if(cls) sp.className = cls;
+  sp.textContent = line+'\n';
+  lb.appendChild(sp);
+  lb.scrollTop = lb.scrollHeight;
+}
+function resetLog(){
+  document.getElementById('logBox').innerHTML='<span class="dim">← 点击左侧任务即可查看实时日志…</span>';
+  document.getElementById('logTitle').textContent='实时日志';
+  document.getElementById('logMeta').textContent='在左侧点击任务查看实时下载日志';
+  document.getElementById('pbar').style.width='0%';
+}
+function clearLog(){document.getElementById('logBox').innerHTML='';}
+function scrollBottom(){const lb=document.getElementById('logBox');lb.scrollTop=lb.scrollHeight;}
+
+// ── files ──────────────────────────────────────────────────────────────────
+async function loadFiles(){
+  const r = await af('/api/files'); if(!r.ok)return;
+  const files = await r.json();
+  const el = document.getElementById('fileList');
+  if(!files.length){el.innerHTML='<div class="empty">暂无文件</div>';return;}
+  // 按子目录分组
+  const groups = {};
+  files.forEach(f=>{
+    const g = f.subdir || '（根目录）';
+    if(!groups[g]) groups[g]=[];
+    groups[g].push(f);
+  });
+  let html = '';
+  for(const [dir, flist] of Object.entries(groups)){
+    html += `<div class="fgroup-label">${esc(dir)}</div>`;
+    html += flist.map(f=>`
+      <div class="fitem">
+        <div style="flex:1;min-width:0">
+          <div class="fname">${esc(f.basename)}</div>
+          <div class="fmeta">${f.size_human}</div>
+        </div>
+        <div class="facts">
+          <a class="bdown" href="/api/files/download?name=${encodeURIComponent(f.name)}" target="_blank">下载</a>
+          <button class="bdanger" onclick="delFile('${encodeURIComponent(f.name)}')">删除</button>
+        </div>
+      </div>`).join('');
+  }
+  el.innerHTML = html;
+}
+
+async function delFile(enc){
+  const name = decodeURIComponent(enc);
+  if(!confirm('确认删除文件 '+name+'？'))return;
+  await af('/api/files/delete',{method:'POST',body:JSON.stringify({name})});
+  loadFiles();
+}
+</script>
+</body>
+</html>
