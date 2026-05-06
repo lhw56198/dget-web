@@ -1,0 +1,20 @@
+services:
+  dget-web:
+    build: .
+    container_name: dget-web
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./downloads:/downloads   # dget 工作目录，产物 tar.gz 落在这里
+      - ./data:/app/data         # 任务记录持久化
+    environment:
+      - WORK_DIR=/downloads      # dget 在此目录下执行，产物直接落这里
+      - DATA_DIR=/app/data
+      - PORT=8080
+      - DGET_USER=admin          # ← 在这里修改登录用户名
+      - DGET_PASS=admin123       # ← 在这里修改登录密码
+    restart: unless-stopped
+
+# 修改密码后执行：docker compose up -d --build
+# 查看日志：      docker compose logs -f
+# 停止：          docker compose down
